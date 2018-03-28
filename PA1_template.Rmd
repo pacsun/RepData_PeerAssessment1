@@ -1,25 +1,119 @@
----
-title: "Reproducible Research: Peer Assessment 1"
-output: 
-  html_document:
-    keep_md: true
----
+Peer Graded Assignment for Week 1 of Reproducible Research
+==========================================================
 
+To complete the assignment and execute the code successfully, the data has to be downloaded and stored into the 'r working directory'/data location. Before running the rest of the code use getwd() and setwd() functions to correctly set your working directly.
 
-## Loading and preprocessing the data
+The below code will check if the data can be already found in the working directory, and if the data file is missing the code will download, unzip and make it available for the running the scripts that follow:
 
 
 
-## What is mean total number of steps taken per day?
+```{r simulation,include= TRUE}
+if(!file.exists("./data")){dir.create("./data")}
+ActivityZipLocation <- "./data/repdata_data_activity.zip"
+ActivityDataLocation <- "./data/repdata_data_activity/activity.csv"
+
+#Verify file existance
+if(!file.exists(ActivityZipLocation)) {
+    if(!file.exists(ActivityZipLocation)){
+        UrlData <- "https://d396qusza40orc.cloudfront.net/repdata%2Fdata%2Factivity.zip"
+        download.file(UrlData,destfile= ActivityZipLocation)
+    }
+    unzip(zipfile=ActivityZipLocation, exdir="./data/repdata_data_activity")
+} else {
+    print ("Data file found")
+}
 
 
+if(!file.exists(ActivityDataLocation)) {
+  print("Could not retrieve the data. Please try manually to  place activity.csv in ./data/repdata_data_activity/ folder and run the script again")
+}
+```
 
-## What is the average daily activity pattern?
+Now that datais place lets read the data,  using read.csv(),  into a data frame:
+```{r}
+activity <- read.csv(ActivityDataLocation)
+```
+
+Lets explore the data little bit. 
+```{r}
+summary(activity)
+```
+
+There are about 2304 records which are missing data. 
 
 
+##What is mean total number of steps taken per day?
 
-## Imputing missing values
+For now lets ignore the missing values and take a look at the mean total number of steps taken per day. 
+```{r}
+totalstepsperday <- aggregate(steps~date, data=activity, sum, na.rm=TRUE)
+hist(totalstepsperday$steps, xlab = "# of Steps", main = "Total Steps Per Day")
+```
+
+The mean and the median of  total number of steps taken per day are:
+```{r}
+mean(totalstepsperday$steps)
+median(totalstepsperday$steps)
+```
 
 
+##What is the average daily activity pattern?
 
-## Are there differences in activity patterns between weekdays and weekends?
+Now lets explore the activity pattern over the 5-minute interval:
+```{r}
+totalstepsbyinterval <- aggregate(steps~interval, data=activity, sum,na.rm=TRUE)
+plot(totalstepsbyinterval$steps~totalstepsbyinterval$interval,activity,type="l")
+```
+
+Which interval has the maximum steps across all days?
+```{r}
+totalstepsbyinterval[totalstepsbyinterval$steps>=max(totalstepsbyinterval$steps),]
+```
+
+##Imputing missing values
+
+Lets take a look at the missing values, how many missing values do we have?
+```{r}
+ sum(is.na(activity$steps))
+```
+
+
+To clean up the data set, lets store the data into a different data frame.
+```{r}
+activitywithoutNA <-activity
+```
+
+Now, lets remove NAs by replacing it with the average of steps per interval:
+
+```{r}
+meanstepsbyinterval <- aggregate(steps~interval, data=activitywithoutNA, mean,na.rm=TRUE)
+
+for(i in 1:nrow(activitywithoutNA )){
+    activitywithoutNA[i,1] <-ifelse(is.na(activitywithoutNA[i,1]), meanstepsbyinterval[meanstepsbyinterval$interval==activitywithoutNA[i,3],2], activitywithoutNA[i,1])
+}
+  
+```
+
+Lets take a look at the histogram on values before and after cleaning up NAs
+```{r}
+totalstepsperdaywithoutNA <- aggregate(steps~date, data=activitywithoutNA, sum, na.rm=TRUE)
+par(mfrow=c(1,2))
+par(margin = c(4,2,2,2))
+hist(totalstepsperday$steps, xlab = "# of Steps", main = "Total Steps Per Day (before cleaning NAs)")
+hist(totalstepsperdaywithoutNA$steps, xlab = "# of Steps", main = "Total Steps Per Day (after cleaning NAs")
+```
+
+##Are there differences in activity patterns between weekdays and weekends?
+Create a new factor variable in the dataset with two levels - "weekday" and "weekend" indicating whether a given date is a weekday or weekend day.
+
+```{r}
+activitywithoutNA$day <-ifelse(weekdays(as.Date(activitywithoutNA$date,'%Y-%m-%d')) %in% c("Saturday", "Sunday"), "weekend", "weekday")
+activitywithoutNA$day <- as.factor(activitywithoutNA$day)
+```
+
+Create a 5-minute interval (x-axis) and the average number of steps taken, averaged across all weekday days or weekend days (y-axis):
+```{r}
+meanwithoutNA <- aggregate(steps~interval+day, data=activitywithoutNA, mean,na.rm=TRUE)
+library(lattice)
+xyplot(steps ~ interval | day, meanwithoutNA , type = "l", layout = c(1, 2), xlab = "Interval", ylab = "# of steps")
+```
