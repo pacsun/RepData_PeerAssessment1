@@ -15,7 +15,8 @@ The below code will check if the data can be already found in the working direct
 
 
 
-```{r simulation,include= TRUE}
+
+```r
 if(!file.exists("./data")){dir.create("./data")}
 ActivityZipLocation <- "./data/repdata_data_activity.zip"
 ActivityDataLocation <- "./data/repdata_data_activity/activity.csv"
@@ -30,21 +31,39 @@ if(!file.exists(ActivityZipLocation)) {
 } else {
     print ("Data file found")
 }
+```
 
+```
+## [1] "Data file found"
+```
 
+```r
 if(!file.exists(ActivityDataLocation)) {
   print("Could not retrieve the data. Please try manually to  place activity.csv in ./data/repdata_data_activity/ folder and run the script again")
 }
 ```
 
 Now that datais place lets read the data,  using read.csv(),  into a data frame:
-```{r}
+
+```r
 activity <- read.csv(ActivityDataLocation)
 ```
 
 Lets explore the data little bit. 
-```{r}
+
+```r
 summary(activity)
+```
+
+```
+##      steps                date          interval     
+##  Min.   :  0.00   2012-10-01:  288   Min.   :   0.0  
+##  1st Qu.:  0.00   2012-10-02:  288   1st Qu.: 588.8  
+##  Median :  0.00   2012-10-03:  288   Median :1177.5  
+##  Mean   : 37.38   2012-10-04:  288   Mean   :1177.5  
+##  3rd Qu.: 12.00   2012-10-05:  288   3rd Qu.:1766.2  
+##  Max.   :806.00   2012-10-06:  288   Max.   :2355.0  
+##  NA's   :2304     (Other)   :15840
 ```
 
 There are about 2304 records which are missing data. 
@@ -53,75 +72,120 @@ There are about 2304 records which are missing data.
 ##What is mean total number of steps taken per day?
 
 For now lets ignore the missing values and take a look at the mean total number of steps taken per day. 
-```{r}
+
+```r
 totalstepsperday <- aggregate(steps~date, data=activity, sum, na.rm=TRUE)
 hist(totalstepsperday$steps, xlab = "# of Steps", main = "Total Steps Per Day")
 ```
 
+![](PA1_template_files/figure-html/unnamed-chunk-3-1.png)<!-- -->
+
 The mean and the median of  total number of steps taken per day are:
-```{r}
+
+```r
 mean(totalstepsperday$steps)
+```
+
+```
+## [1] 10766.19
+```
+
+```r
 median(totalstepsperday$steps)
+```
+
+```
+## [1] 10765
 ```
 
 
 ##What is the average daily activity pattern?
 
 Now lets explore the activity pattern over the 5-minute interval:
-```{r}
+
+```r
 totalstepsbyinterval <- aggregate(steps~interval, data=activity, sum,na.rm=TRUE)
 plot(totalstepsbyinterval$steps~totalstepsbyinterval$interval,activity,type="l")
 ```
 
+![](PA1_template_files/figure-html/unnamed-chunk-5-1.png)<!-- -->
+
 Which interval has the maximum steps across all days?
-```{r}
+
+```r
 totalstepsbyinterval[totalstepsbyinterval$steps>=max(totalstepsbyinterval$steps),]
+```
+
+```
+##     interval steps
+## 104      835 10927
 ```
 
 ##Imputing missing values
 
 Lets take a look at the missing values, how many missing values do we have?
-```{r}
+
+```r
  sum(is.na(activity$steps))
+```
+
+```
+## [1] 2304
 ```
 
 
 To clean up the data set, lets store the data into a different data frame.
-```{r}
+
+```r
 activitywithoutNA <-activity
 ```
 
 Now, lets remove NAs by replacing it with the average of steps per interval:
 
-```{r}
+
+```r
 meanstepsbyinterval <- aggregate(steps~interval, data=activitywithoutNA, mean,na.rm=TRUE)
 
 for(i in 1:nrow(activitywithoutNA )){
     activitywithoutNA[i,1] <-ifelse(is.na(activitywithoutNA[i,1]), meanstepsbyinterval[meanstepsbyinterval$interval==activitywithoutNA[i,3],2], activitywithoutNA[i,1])
 }
-  
 ```
 
 Lets take a look at the histogram on values before and after cleaning up NAs
-```{r}
+
+```r
 totalstepsperdaywithoutNA <- aggregate(steps~date, data=activitywithoutNA, sum, na.rm=TRUE)
 par(mfrow=c(1,2))
 par(margin = c(4,2,2,2))
+```
+
+```
+## Warning in par(margin = c(4, 2, 2, 2)): "margin" is not a graphical
+## parameter
+```
+
+```r
 hist(totalstepsperday$steps, xlab = "# of Steps", main = "Total Steps Per Day (before cleaning NAs)")
 hist(totalstepsperdaywithoutNA$steps, xlab = "# of Steps", main = "Total Steps Per Day (after cleaning NAs")
 ```
 
+![](PA1_template_files/figure-html/unnamed-chunk-10-1.png)<!-- -->
+
 ##Are there differences in activity patterns between weekdays and weekends?
 Create a new factor variable in the dataset with two levels - "weekday" and "weekend" indicating whether a given date is a weekday or weekend day.
 
-```{r}
+
+```r
 activitywithoutNA$day <-ifelse(weekdays(as.Date(activitywithoutNA$date,'%Y-%m-%d')) %in% c("Saturday", "Sunday"), "weekend", "weekday")
 activitywithoutNA$day <- as.factor(activitywithoutNA$day)
 ```
 
 Create a 5-minute interval (x-axis) and the average number of steps taken, averaged across all weekday days or weekend days (y-axis):
-```{r}
+
+```r
 meanwithoutNA <- aggregate(steps~interval+day, data=activitywithoutNA, mean,na.rm=TRUE)
 library(lattice)
 xyplot(steps ~ interval | day, meanwithoutNA , type = "l", layout = c(1, 2), xlab = "Interval", ylab = "# of steps")
 ```
+
+![](PA1_template_files/figure-html/unnamed-chunk-12-1.png)<!-- -->
